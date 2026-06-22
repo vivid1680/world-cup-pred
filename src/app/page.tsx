@@ -1,9 +1,10 @@
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { createClient } from '@/utils/supabase/server';
 import { getMatchesWithUserPredictions } from '@/app/actions/predictions';
 import { MatchFeed } from '@/components/match-feed';
 import { Button } from '@/components/ui/button';
-import { LogOut, Trophy, User as UserIcon } from 'lucide-react';
+import { LogOut, Trophy, User as UserIcon, Award } from 'lucide-react';
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -46,6 +47,17 @@ export default async function DashboardPage() {
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Leaderboard Link */}
+            <Link href="/leaderboard">
+              <Button
+                variant="outline"
+                className="rounded-xl border-zinc-800 text-zinc-300 bg-zinc-900/60 hover:bg-zinc-800 hover:text-white cursor-pointer flex gap-1.5 items-center text-xs h-9"
+              >
+                <Award className="w-4 h-4 text-yellow-500" />
+                <span className="hidden sm:inline">Leaderboard</span>
+              </Button>
+            </Link>
+
             {/* Points Badge */}
             <div className="flex items-center gap-1.5 bg-yellow-500 text-zinc-950 px-3 py-1.5 rounded-xl border border-yellow-400 font-extrabold text-xs shadow-md">
               <Trophy className="w-4 h-4" />

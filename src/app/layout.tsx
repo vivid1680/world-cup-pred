@@ -28,8 +28,13 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
-        {children}
+      <body className="min-h-full flex flex-col bg-zinc-950">
+        <div className="flex-1 flex flex-col">
+          {children}
+        </div>
+        <footer className="py-6 text-center text-xs font-semibold text-white/45 tracking-widest bg-transparent">
+          built by vivid
+        </footer>
         <Toaster richColors position="top-right" />
       </body>
     </html>
