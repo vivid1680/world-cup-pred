@@ -2,19 +2,22 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
-  const code = searchParams.get('code');
-  // If a post-login destination redirect parameter is present, use it. Otherwise go to root.
-  const next = searchParams.get('next') ?? '/';
+  const requestUrl = new URL(request.url);
+  const code = requestUrl.searchParams.get('code');
+  const next = requestUrl.searchParams.get('next') ?? '/dashboard';
 
   if (code) {
     const supabase = await createClient();
+    // This is the line that catches the code and creates your session!
     const { error } = await supabase.auth.exchangeCodeForSession(code);
+    
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`);
+      return NextResponse.redirect(`${requestUrl.origin}${next}`);
+    } else {
+      // If it drops the ball, it will tell us exactly why in the terminal
+      console.error("SUPABASE CALLBACK ERROR:", error.message);
     }
   }
 
-  // If there's an error, redirect back to the login page with an error state query
-  return NextResponse.redirect(`${origin}/login?error=Could not authenticate user`);
+  return NextResponse.redirect(`${requestUrl.origin}/login?error=Could%20not%20authenticate%20user`);
 }
