@@ -18,8 +18,8 @@ export interface Match {
   home_team: string;
   away_team: string;
   kickoff_time: string; // ISO timestamptz string
-  home_score: number | null; // Nullable until match starts/finishes
-  away_score: number | null; // Nullable until match starts/finishes
+  actual_home_score: number | null; // Nullable until match starts/finishes
+  actual_away_score: number | null; // Nullable until match starts/finishes
   status: 'SCHEDULED' | 'LIVE' | 'FINISHED';
   created_at: string; // ISO timestamptz string
 }
@@ -73,8 +73,8 @@ export interface Database {
           home_team: string;
           away_team: string;
           kickoff_time: string;
-          home_score?: number | null;
-          away_score?: number | null;
+          actual_home_score?: number | null;
+          actual_away_score?: number | null;
           status?: 'SCHEDULED' | 'LIVE' | 'FINISHED'; // Defaults to 'SCHEDULED'
           created_at?: string;
         };
@@ -83,8 +83,8 @@ export interface Database {
           home_team?: string;
           away_team?: string;
           kickoff_time?: string;
-          home_score?: number | null;
-          away_score?: number | null;
+          actual_home_score?: number | null;
+          actual_away_score?: number | null;
           status?: 'SCHEDULED' | 'LIVE' | 'FINISHED';
           created_at?: string;
         };

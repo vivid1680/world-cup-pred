@@ -105,7 +105,7 @@ async function runSettlementTest() {
   // Test Scenario 1: Exact Match (Predicted 2-1, Actual 2-1) -> Should award 3 points
   console.log('\n🔍 Test 1: Settle match as 2-1 (Exact Match)...');
   try {
-    await settleMatch(TEST_MATCH_ID, 2, 1);
+    await settleMatch(TEST_MATCH_ID, 2, 1, supabase);
     
     // Check points awarded
     const { data: pData } = await supabase
@@ -136,7 +136,7 @@ async function runSettlementTest() {
   // Test Scenario 2: Correct Outcome Only (Predicted 2-1, Actual 1-0) -> Should award 1 point
   console.log('\n🔍 Test 2: Settle match as 1-0 (Correct Outcome Only)...');
   try {
-    await settleMatch(TEST_MATCH_ID, 1, 0);
+    await settleMatch(TEST_MATCH_ID, 1, 0, supabase);
 
     const { data: pData } = await supabase
       .from('predictions')
@@ -165,7 +165,7 @@ async function runSettlementTest() {
   // Test Scenario 3: Incorrect Outcome (Predicted 2-1, Actual 1-2) -> Should award 0 points
   console.log('\n🔍 Test 3: Settle match as 1-2 (Incorrect Outcome)...');
   try {
-    await settleMatch(TEST_MATCH_ID, 1, 2);
+    await settleMatch(TEST_MATCH_ID, 1, 2, supabase);
 
     const { data: pData } = await supabase
       .from('predictions')

@@ -166,7 +166,7 @@ export function MatchCard({ match, onSavePrediction }: MatchCardProps) {
           <div className="col-span-1 flex flex-col items-center justify-center">
             {match.status !== 'SCHEDULED' ? (
               <div className="text-xl font-extrabold text-zinc-800 tracking-tight bg-zinc-100 px-2 py-1 rounded">
-                {match.home_score} - {match.away_score}
+                {match.actual_home_score} - {match.actual_away_score}
               </div>
             ) : (
               <span className="text-xs font-black text-zinc-400">VS</span>

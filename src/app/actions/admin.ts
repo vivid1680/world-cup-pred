@@ -11,21 +11,22 @@ import { revalidatePath } from 'next/cache';
 export async function settleMatch(
   matchId: number,
   finalHomeScore: number,
-  finalAwayScore: number
+  finalAwayScore: number,
+  supabaseClientForTesting?: any
 ) {
   // Simple validation
   if (finalHomeScore < 0 || finalAwayScore < 0) {
     throw new Error('Scores must be non-negative integers.');
   }
 
-  const supabase = await createClient();
+  const supabase = supabaseClientForTesting || await createClient();
 
   // 1. Update the match score and status
   const { error: matchError } = await supabase
     .from('matches')
     .update({
-      home_score: finalHomeScore,
-      away_score: finalAwayScore,
+      actual_home_score: finalHomeScore,
+      actual_away_score: finalAwayScore,
       status: 'FINISHED',
     })
     .eq('id', matchId);
@@ -67,7 +68,7 @@ export async function settleMatch(
     }
 
     // 4. Update total points in public.users for every affected user
-    const affectedUserIds = Array.from(new Set(predictions.map((p) => p.user_id)));
+    const affectedUserIds = Array.from(new Set((predictions || []).map((p: any) => p.user_id)));
 
     for (const userId of affectedUserIds) {
       const { data: userPreds, error: sumError } = await supabase
@@ -81,7 +82,7 @@ export async function settleMatch(
       }
 
       const newTotal = (userPreds || []).reduce(
-        (sum, pred) => sum + (pred.points_awarded ?? 0),
+        (sum: number, pred: any) => sum + (pred.points_awarded ?? 0),
         0
       );
 
@@ -97,8 +98,10 @@ export async function settleMatch(
   }
 
   // 5. Revalidate cache for the dashboard and the leaderboard
-  revalidatePath('/');
-  revalidatePath('/leaderboard');
+  if (!supabaseClientForTesting) {
+    revalidatePath('/');
+    revalidatePath('/leaderboard');
+  }
 
   return { success: true };
 }

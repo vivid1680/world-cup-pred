@@ -23,8 +23,8 @@ CREATE TABLE IF NOT EXISTS public.matches (
     home_team TEXT NOT NULL,
     away_team TEXT NOT NULL,
     kickoff_time TIMESTAMPTZ NOT NULL,
-    home_score INTEGER,
-    away_score INTEGER,
+    actual_home_score INTEGER, -- Named actual_home_score as requested
+    actual_away_score INTEGER, -- Named actual_away_score as requested
     status TEXT NOT NULL CHECK (status IN ('SCHEDULED', 'LIVE', 'FINISHED')) DEFAULT 'SCHEDULED',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -128,3 +128,46 @@ CREATE INDEX IF NOT EXISTS idx_predictions_user_id ON public.predictions(user_id
 CREATE INDEX IF NOT EXISTS idx_predictions_match_id ON public.predictions(match_id);
 CREATE INDEX IF NOT EXISTS idx_matches_kickoff_time ON public.matches(kickoff_time);
 CREATE INDEX IF NOT EXISTS idx_users_total_points ON public.users(total_points DESC);
+
+---------------------------------------------------------
+-- 5. Settle Match RPC (Remote Procedure Call) Function
+---------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.settle_match_rpc(
+    p_match_id INT,
+    p_actual_home_score INT,
+    p_actual_away_score INT
+)
+RETURNS VOID AS $$
+BEGIN
+    -- 1. Update the match score and status in public.matches
+    UPDATE public.matches
+    SET 
+        actual_home_score = p_actual_home_score,
+        actual_away_score = p_actual_away_score,
+        status = 'FINISHED'
+    WHERE id = p_match_id;
+
+    -- 2. Update points for all predictions of this match
+    -- 3 points for exact score match, 1 point for outcome, 0 points otherwise
+    UPDATE public.predictions
+    SET points_awarded = CASE
+        WHEN predicted_home_score = p_actual_home_score AND predicted_away_score = p_actual_away_score THEN 3
+        WHEN SIGN(predicted_home_score - predicted_away_score) = SIGN(p_actual_home_score - p_actual_away_score) THEN 1
+        ELSE 0
+    END
+    WHERE match_id = p_match_id;
+
+    -- 3. Recalculate total_points in public.users for every user affected
+    UPDATE public.users u
+    SET total_points = COALESCE((
+        SELECT SUM(points_awarded)
+        FROM public.predictions p
+        WHERE p.user_id = u.id
+    ), 0)
+    WHERE u.id IN (
+        SELECT user_id 
+        FROM public.predictions
+        WHERE match_id = p_match_id
+    );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
