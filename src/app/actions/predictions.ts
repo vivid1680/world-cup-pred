@@ -97,14 +97,6 @@ export async function getMatchesWithUserPredictions(supabaseClientForTesting?: a
     `)
     .order('kickoff_time', { ascending: true });
 
-  // Filter left-joined predictions on PostgREST to retrieve only current user's prediction
-  if (user) {
-    query = query.eq('predictions.user_id', user.id);
-  } else {
-    // If guest, force left join to be empty/null by matching an impossible criteria
-    query = query.is('predictions.id', null);
-  }
-
   const { data, error } = await query;
 
   if (error) {
@@ -113,11 +105,11 @@ export async function getMatchesWithUserPredictions(supabaseClientForTesting?: a
   }
 
   // Clean join representation for easier UI usage:
-  // Maps predictions array to a single optional `user_prediction` property.
+  // Maps predictions array to a single optional `user_prediction` property for the current user.
   return (data as any[]).map((match: any) => {
-    const rawPredictions = match.predictions as any[];
-    const userPrediction = rawPredictions && rawPredictions.length > 0
-      ? (rawPredictions[0] as Prediction)
+    const rawPredictions = match.predictions as any[] || [];
+    const userPrediction = user
+      ? (rawPredictions.find((p: any) => p.user_id === user.id) as Prediction) || null
       : null;
 
     // Destructure to remove the raw list join
