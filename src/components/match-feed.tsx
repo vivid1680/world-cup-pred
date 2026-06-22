@@ -6,6 +6,7 @@ import { MatchCard } from './match-card';
 import { submitPrediction } from '@/app/actions/predictions';
 import { Badge } from '@/components/ui/badge';
 import { LayoutGrid, CalendarRange, CheckCircle2, History } from 'lucide-react';
+import { SyncScheduleButton } from './SyncScheduleButton';
 
 interface MatchFeedProps {
   initialMatches: MatchWithPrediction[];
@@ -88,36 +89,41 @@ export function MatchFeed({ initialMatches }: MatchFeedProps) {
 
   return (
     <div className="flex flex-col gap-6 w-full">
-      {/* Interactive Tabs Header */}
-      <div className="flex overflow-x-auto gap-2 pb-2 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-200 cursor-pointer ${
-                isActive
-                  ? 'bg-yellow-500 text-zinc-950 shadow-md transform scale-[1.02]'
-                  : 'bg-zinc-900/60 border border-zinc-800 text-zinc-300 hover:bg-zinc-800/80 hover:text-white'
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              <span>{tab.label}</span>
-              <Badge
-                variant="secondary"
-                className={`ml-1 px-1.5 py-0.25 text-[10px] rounded-md font-black ${
+      {/* Interactive Tabs Header & Actions */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-zinc-800 pb-4">
+        <div className="flex overflow-x-auto gap-2 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-200 cursor-pointer ${
                   isActive
-                    ? 'bg-zinc-950 text-white'
-                    : 'bg-zinc-800 text-zinc-400 group-hover:bg-zinc-700'
+                    ? 'bg-yellow-500 text-zinc-950 shadow-md transform scale-[1.02]'
+                    : 'bg-zinc-900/60 border border-zinc-800 text-zinc-300 hover:bg-zinc-800/80 hover:text-white'
                 }`}
               >
-                {tab.count}
-              </Badge>
-            </button>
-          );
-        })}
+                <Icon className="w-4 h-4" />
+                <span>{tab.label}</span>
+                <Badge
+                  variant="secondary"
+                  className={`ml-1 px-1.5 py-0.25 text-[10px] rounded-md font-black ${
+                    isActive
+                      ? 'bg-zinc-950 text-white'
+                      : 'bg-zinc-800 text-zinc-400 group-hover:bg-zinc-700'
+                  }`}
+                >
+                  {tab.count}
+                </Badge>
+              </button>
+            );
+          })}
+        </div>
+        <div className="flex items-center gap-2 px-4 sm:px-0">
+          <SyncScheduleButton />
+        </div>
       </div>
 
       {/* Feed List Grid */}
