@@ -15,6 +15,7 @@ export interface User {
 
 export interface Match {
   id: number; // Unique match ID
+  api_id: number | null; // External match ID from API-Football
   home_team: string;
   away_team: string;
   kickoff_time: string; // ISO timestamptz string
@@ -69,7 +70,8 @@ export interface Database {
       matches: {
         Row: Match;
         Insert: {
-          id: number;
+          id?: number;
+          api_id?: number | null;
           home_team: string;
           away_team: string;
           kickoff_time: string;
@@ -80,6 +82,7 @@ export interface Database {
         };
         Update: {
           id?: number;
+          api_id?: number | null;
           home_team?: string;
           away_team?: string;
           kickoff_time?: string;
