@@ -3,6 +3,7 @@
 import { createClient } from '@/utils/supabase/server';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
+import { FIXTURES_2026 } from '@/utils/fixtures2026';
 
 // Interface for API-Football v3 Fixture response structure
 export interface ApiFootballFixture {
@@ -73,7 +74,7 @@ export async function syncWorldCupFixtures() {
     throw new Error('Missing environment variable API_FOOTBALL_KEY.');
   }
 
-  // 2. Fetch fixtures for World Cup (defaults to 2026, auto fallbacks to 2022 if Free plan limits prevent it)
+  // 2. Fetch fixtures for World Cup (defaults to 2026, auto fallbacks to predefined 2026 fixtures if Free plan limits prevent it)
   let season = process.env.API_FOOTBALL_SEASON || '2026';
   let syncUrl = `${baseUrl}/fixtures?league=1&season=${season}`;
   console.log(`[Sync Fixtures] Fetching from: ${syncUrl}`);
@@ -93,77 +94,64 @@ export async function syncWorldCupFixtures() {
   let responseData: ApiFootballResponse = await apiResponse.json();
   let hasError = responseData.errors && (Array.isArray(responseData.errors) ? responseData.errors.length > 0 : Object.keys(responseData.errors).length > 0);
   let fellBack = false;
+  let mappedMatches: any[] = [];
 
-  // Intercept subscription error to auto-fallback to 2022 if season is 2026
+  // Intercept subscription error to auto-fallback to predefined 2026 fixtures if season is 2026
   if (hasError && season === '2026') {
     const errorStr = JSON.stringify(responseData.errors);
     if (errorStr.toLowerCase().includes('free plans do not have access') || errorStr.toLowerCase().includes('subscription')) {
-      console.warn('[Sync Fixtures] 2026 season not accessible on this plan. Retrying with 2022 season as fallback...');
-      season = '2022';
-      syncUrl = `${baseUrl}/fixtures?league=1&season=${season}`;
-      
-      apiResponse = await fetch(syncUrl, {
-        method: 'GET',
-        headers: {
-          'x-apisports-key': apiKey,
-        },
-        next: { revalidate: 0 },
-      });
-
-      if (!apiResponse.ok) {
-        throw new Error(`API-Football fallback request failed with HTTP ${apiResponse.status}`);
-      }
-
-      responseData = await apiResponse.json();
-      hasError = responseData.errors && (Array.isArray(responseData.errors) ? responseData.errors.length > 0 : Object.keys(responseData.errors).length > 0);
+      console.warn('[Sync Fixtures] 2026 season not accessible on this plan. Loading local predefined 2026 World Cup schedule...');
+      mappedMatches = FIXTURES_2026;
       fellBack = true;
     }
   }
 
-  if (hasError) {
-    const errMsg = typeof responseData.errors === 'string'
-      ? responseData.errors
-      : JSON.stringify(responseData.errors);
-    throw new Error(`API-Football subscription/request error: ${errMsg}`);
-  }
-
-  const apiFixtures = responseData.response || [];
-  console.log(`[Sync Fixtures] Fetched ${apiFixtures.length} matches in total`);
-
-  // 3. Filter specifically for Group Stage matches
-  const groupStageFixtures = apiFixtures.filter((item) =>
-    item.league?.round?.toLowerCase().includes('group stage')
-  );
-  console.log(`[Sync Fixtures] Filtered down to ${groupStageFixtures.length} Group Stage matches`);
-
-  if (groupStageFixtures.length === 0) {
-    return { success: true, count: 0, message: 'No Group Stage matches found in the retrieved schedule.' };
-  }
-
-  // 4. Map API-Football data properties to our internal format
-  const mappedMatches = groupStageFixtures.map((item) => {
-    let status: 'SCHEDULED' | 'LIVE' | 'FINISHED' = 'SCHEDULED';
-    const shortStatus = item.fixture.status.short;
-
-    // Map API-Football statuses to internal statuses
-    if (['FT', 'AET', 'PEN'].includes(shortStatus)) {
-      status = 'FINISHED';
-    } else if (
-      ['1H', 'HT', '2H', 'ET', 'BT', 'P', 'SUSP', 'INT', 'LIVE'].includes(shortStatus)
-    ) {
-      status = 'LIVE';
+  if (!fellBack) {
+    if (hasError) {
+      const errMsg = typeof responseData.errors === 'string'
+        ? responseData.errors
+        : JSON.stringify(responseData.errors);
+      throw new Error(`API-Football subscription/request error: ${errMsg}`);
     }
 
-    return {
-      api_id: item.fixture.id,
-      home_team: item.teams.home.name,
-      away_team: item.teams.away.name,
-      kickoff_time: item.fixture.date,
-      status: status,
-      actual_home_score: item.goals.home,
-      actual_away_score: item.goals.away,
-    };
-  });
+    const apiFixtures = responseData.response || [];
+    console.log(`[Sync Fixtures] Fetched ${apiFixtures.length} matches in total`);
+
+    // 3. Filter specifically for Group Stage matches
+    const groupStageFixtures = apiFixtures.filter((item) =>
+      item.league?.round?.toLowerCase().includes('group stage')
+    );
+    console.log(`[Sync Fixtures] Filtered down to ${groupStageFixtures.length} Group Stage matches`);
+
+    if (groupStageFixtures.length === 0) {
+      return { success: true, count: 0, message: 'No Group Stage matches found in the retrieved schedule.' };
+    }
+
+    // 4. Map API-Football data properties to our internal format
+    mappedMatches = groupStageFixtures.map((item) => {
+      let status: 'SCHEDULED' | 'LIVE' | 'FINISHED' = 'SCHEDULED';
+      const shortStatus = item.fixture.status.short;
+
+      // Map API-Football statuses to internal statuses
+      if (['FT', 'AET', 'PEN'].includes(shortStatus)) {
+        status = 'FINISHED';
+      } else if (
+        ['1H', 'HT', '2H', 'ET', 'BT', 'P', 'SUSP', 'INT', 'LIVE'].includes(shortStatus)
+      ) {
+        status = 'LIVE';
+      }
+
+      return {
+        api_id: item.fixture.id,
+        home_team: item.teams.home.name,
+        away_team: item.teams.away.name,
+        kickoff_time: item.fixture.date,
+        status: status,
+        actual_home_score: item.goals.home,
+        actual_away_score: item.goals.away,
+      };
+    });
+  }
 
   // 5. Connect to Supabase using service_role key to bypass RLS for administrative changes
   const supabaseAdmin = createSupabaseClient(
@@ -191,7 +179,7 @@ export async function syncWorldCupFixtures() {
     success: true,
     count: mappedMatches.length,
     message: fellBack
-      ? `Successfully synchronized ${mappedMatches.length} Group Stage fixtures (fell back to 2022 World Cup due to Free API plan limitations).`
+      ? `Successfully loaded ${mappedMatches.length} official 2026 World Cup Group Stage fixtures (fell back to local seed due to Free API plan limitations).`
       : `Successfully synchronized ${mappedMatches.length} Group Stage fixtures.`,
   };
 }
