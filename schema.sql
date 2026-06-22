@@ -80,11 +80,13 @@ ALTER TABLE public.predictions ENABLE ROW LEVEL SECURITY;
 
 -- 3a. Users Table Policies
 -- Everyone can read user points and profiles
+DROP POLICY IF EXISTS "Allow public read access to users" ON public.users;
 CREATE POLICY "Allow public read access to users" 
     ON public.users FOR SELECT 
     USING (true);
 
 -- Users can update their own user profiles (e.g., username change)
+DROP POLICY IF EXISTS "Allow users to update their own profile" ON public.users;
 CREATE POLICY "Allow users to update their own profile" 
     ON public.users FOR UPDATE 
     USING (auth.uid() = id)
@@ -92,6 +94,7 @@ CREATE POLICY "Allow users to update their own profile"
 
 -- 3b. Matches Table Policies
 -- Everyone can read matches
+DROP POLICY IF EXISTS "Allow public read access to matches" ON public.matches;
 CREATE POLICY "Allow public read access to matches" 
     ON public.matches FOR SELECT 
     USING (true);
@@ -101,22 +104,26 @@ CREATE POLICY "Allow public read access to matches"
 
 -- 3c. Predictions Table Policies
 -- Users can read their own predictions
+DROP POLICY IF EXISTS "Allow users to read their own predictions" ON public.predictions;
 CREATE POLICY "Allow users to read their own predictions" 
     ON public.predictions FOR SELECT 
     USING (auth.uid() = user_id);
 
 -- Users can insert their own predictions
+DROP POLICY IF EXISTS "Allow users to insert their own predictions" ON public.predictions;
 CREATE POLICY "Allow users to insert their own predictions" 
     ON public.predictions FOR INSERT 
     WITH CHECK (auth.uid() = user_id);
 
 -- Users can update their own predictions
+DROP POLICY IF EXISTS "Allow users to update their own predictions" ON public.predictions;
 CREATE POLICY "Allow users to update their own predictions" 
     ON public.predictions FOR UPDATE 
     USING (auth.uid() = user_id)
     WITH CHECK (auth.uid() = user_id);
 
 -- Users can delete their own predictions
+DROP POLICY IF EXISTS "Allow users to delete their own predictions" ON public.predictions;
 CREATE POLICY "Allow users to delete their own predictions" 
     ON public.predictions FOR DELETE 
     USING (auth.uid() = user_id);
