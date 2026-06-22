@@ -147,3 +147,7 @@ export interface Database {
 export type DbRow<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row'];
 export type DbInsert<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Insert'];
 export type DbUpdate<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Update'];
+
+export type MatchWithPrediction = Match & {
+  user_prediction: Prediction | null;
+};
