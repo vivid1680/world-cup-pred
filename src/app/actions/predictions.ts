@@ -114,7 +114,7 @@ export async function getMatchesWithUserPredictions(supabaseClientForTesting?: a
 
   // Clean join representation for easier UI usage:
   // Maps predictions array to a single optional `user_prediction` property.
-  return data.map((match) => {
+  return (data as any[]).map((match: any) => {
     const rawPredictions = match.predictions as any[];
     const userPrediction = rawPredictions && rawPredictions.length > 0
       ? (rawPredictions[0] as Prediction)
