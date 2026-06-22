@@ -10,14 +10,15 @@ import { Prediction } from '@/types/database';
 export async function submitPrediction(
   matchId: number,
   homeScore: number,
-  awayScore: number
+  awayScore: number,
+  supabaseClientForTesting?: any
 ) {
   // Validate basic score limits
   if (homeScore < 0 || awayScore < 0) {
     throw new Error('Scores must be non-negative integers.');
   }
 
-  const supabase = await createClient();
+  const supabase = supabaseClientForTesting || await createClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
 
   if (authError || !user) {
@@ -33,6 +34,10 @@ export async function submitPrediction(
 
   if (matchError || !match) {
     throw new Error('Match not found.');
+  }
+
+  if (match.status === 'FINISHED') {
+    throw new Error('Cannot predict finished matches.');
   }
 
   const kickoff = new Date(match.kickoff_time);
@@ -72,8 +77,8 @@ export async function submitPrediction(
 /**
  * Fetches all matches and joins the current authenticated user's prediction (if any).
  */
-export async function getMatchesWithUserPredictions() {
-  const supabase = await createClient();
+export async function getMatchesWithUserPredictions(supabaseClientForTesting?: any) {
+  const supabase = supabaseClientForTesting || await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   let query = supabase
