@@ -73,11 +73,12 @@ export async function syncWorldCupFixtures() {
     throw new Error('Missing environment variable API_FOOTBALL_KEY.');
   }
 
-  // 2. Fetch fixtures for World Cup 2026 (League ID: 1, Season: 2026)
-  const syncUrl = `${baseUrl}/fixtures?league=1&season=2026`;
+  // 2. Fetch fixtures for World Cup (defaults to 2026, auto fallbacks to 2022 if Free plan limits prevent it)
+  let season = process.env.API_FOOTBALL_SEASON || '2026';
+  let syncUrl = `${baseUrl}/fixtures?league=1&season=${season}`;
   console.log(`[Sync Fixtures] Fetching from: ${syncUrl}`);
 
-  const apiResponse = await fetch(syncUrl, {
+  let apiResponse = await fetch(syncUrl, {
     method: 'GET',
     headers: {
       'x-apisports-key': apiKey,
@@ -89,10 +90,37 @@ export async function syncWorldCupFixtures() {
     throw new Error(`API-Football request failed with HTTP ${apiResponse.status}`);
   }
 
-  const responseData: ApiFootballResponse = await apiResponse.json();
+  let responseData: ApiFootballResponse = await apiResponse.json();
+  let hasError = responseData.errors && (Array.isArray(responseData.errors) ? responseData.errors.length > 0 : Object.keys(responseData.errors).length > 0);
+  let fellBack = false;
 
-  // Check if API returned validation/subscription errors
-  if (responseData.errors && (Array.isArray(responseData.errors) ? responseData.errors.length > 0 : Object.keys(responseData.errors).length > 0)) {
+  // Intercept subscription error to auto-fallback to 2022 if season is 2026
+  if (hasError && season === '2026') {
+    const errorStr = JSON.stringify(responseData.errors);
+    if (errorStr.toLowerCase().includes('free plans do not have access') || errorStr.toLowerCase().includes('subscription')) {
+      console.warn('[Sync Fixtures] 2026 season not accessible on this plan. Retrying with 2022 season as fallback...');
+      season = '2022';
+      syncUrl = `${baseUrl}/fixtures?league=1&season=${season}`;
+      
+      apiResponse = await fetch(syncUrl, {
+        method: 'GET',
+        headers: {
+          'x-apisports-key': apiKey,
+        },
+        next: { revalidate: 0 },
+      });
+
+      if (!apiResponse.ok) {
+        throw new Error(`API-Football fallback request failed with HTTP ${apiResponse.status}`);
+      }
+
+      responseData = await apiResponse.json();
+      hasError = responseData.errors && (Array.isArray(responseData.errors) ? responseData.errors.length > 0 : Object.keys(responseData.errors).length > 0);
+      fellBack = true;
+    }
+  }
+
+  if (hasError) {
     const errMsg = typeof responseData.errors === 'string'
       ? responseData.errors
       : JSON.stringify(responseData.errors);
@@ -162,6 +190,8 @@ export async function syncWorldCupFixtures() {
   return {
     success: true,
     count: mappedMatches.length,
-    message: `Successfully synchronized ${mappedMatches.length} Group Stage fixtures.`,
+    message: fellBack
+      ? `Successfully synchronized ${mappedMatches.length} Group Stage fixtures (fell back to 2022 World Cup due to Free API plan limitations).`
+      : `Successfully synchronized ${mappedMatches.length} Group Stage fixtures.`,
   };
 }
